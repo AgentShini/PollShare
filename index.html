@@ -184,57 +184,55 @@
                 state = { ...state, ...newState };  // Update state with new data
                 renderPoll();  // Re-render the poll UI whenever the state changes
             }
+function renderPoll() {
+    const app = document.getElementById('app');
+    const { question, options, id } = state;
 
-            function renderPoll() {
-                const app = document.getElementById('app');
-                const { question, options, id } = state;
+    app.innerHTML = `
+        <h2>${question}</h2>
+        <div id="timer"></div>
+        <ul>
+            ${options.map((option, index) => `
+                <li class="option">
+                    <label>
+                        <input type="radio" name="poll-option" value="${index + 1}">
+                        ${option.text} (${option.votes} votes)
+                    </label>
+                </li>
+            `).join('')}
+        </ul>
+        <button id="vote-button">Vote</button>
+        <div class="chart-container" id="analytics"></div>
+    `;
 
-                app.innerHTML = `
-                    <h2>${question}</h2>
-                    <div id="timer"></div>
-                    <ul>
-                        ${options.map((option, index) => `
-                            <li class="option">
-                                <label>
-                                    <input type="radio" name="poll-option" value="${index}">
-                                    ${option.text} (${option.votes} votes)
-                                </label>
-                            </li>
-                        `).join('')}
-                    </ul>
-                    <button id="vote-button">Vote</button>
-                    <div class="chart-container" id="analytics"></div>
-                `;
+    document.getElementById('vote-button').addEventListener('click', () => {
+        const selectedOption = document.querySelector('input[name="poll-option"]:checked');
+        if (selectedOption) {
+            const selectedIndex = parseInt(selectedOption.value) - 1;
+            submitVote(id, selectedIndex);
+        } else {
+            alert("Please select an option.");
+        }
+    });
 
-                document.getElementById('vote-button').addEventListener('click', () => {
-                    const selectedOption = document.querySelector('input[name="poll-option"]:checked');
-                    if (selectedOption) {
-                        const selectedIndex = parseInt(selectedOption.value);  // Ensure the value is correctly parsed to an integer
-                        submitVote(id, selectedIndex);
-                    } else {
-                        alert("Please select an option.");
-                    }
-                });
+    renderAnalytics(state);
+}
 
-                renderAnalytics(state);
-            }
-
-            async function submitVote(pollId, selectedOption) {
-                try {
-                    const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ selectedOption })  // Send correct option index
-                    });
-                    if (!response.ok) throw new Error("Failed to submit vote");
-                    const updatedPoll = await response.json();
-                    setState(updatedPoll);  // Update state with the new poll data
-                } catch (error) {
-                    console.error(error
-                                                      );
-                    alert("Could not submit vote.");
-                }
-            }
+async function submitVote(pollId, selectedOption) {
+    try {
+        const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selectedOption })
+        });
+        if (!response.ok) throw new Error("Failed to submit vote");
+        const updatedPoll = await response.json();
+        setState(updatedPoll);
+    } catch (error) {
+        console.error(error);
+        alert("Could not submit vote.");
+    }
+}
 
             function setupWebSocket(pollId) {
                 const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);
