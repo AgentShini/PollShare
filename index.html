@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Polling App</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #fff;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background-color: #fff;
+            border: 3px solid #000;
+            padding: 20px;
+            box-shadow: 0 0 10px #000;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #000;
+        }
+
+        input[type="text"], input[type="number"], button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #000;
+            background-color: #fff;
+            color: #000;
+            font-size: 1rem;
+        }
+
+        button {
+            background: #000;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .option, .result-option {
+            border: 2px solid #000;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f1f1f1;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: #000;
+            transition: width 0.5s ease-in-out;
+        }
+
+        #timer {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            color: #000;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Retro Polling App</h1>
+        <div id="app">
+            <!-- Dynamic content will be injected here -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const serverUrl = "https://pollshare-1gww.onrender.com";  // Update this if server URL is different
+
+            const pollId = getPollIdFromUrl();
+            if (pollId) {
+                loadPoll(pollId);
+                setupWebSocket(pollId);
+            } else {
+                renderCreatePollForm();
+            }
+
+            function getPollIdFromUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('poll');
+            }
+
+            function renderCreatePollForm() {
+                const app = document.getElementById('app');
+                app.innerHTML = `
+                    <h2>Create a New Poll</h2>
+                    <form id="create-poll-form">
+                        <input type="text" id="poll-question" placeholder="Enter your question">
+                        <div id="options-container">
+                            <input type="text" class="poll-option" placeholder="Option 1">
+                            <input type="text" class="poll-option" placeholder="Option 2">
+                        </div>
+                        <button type="button" id="add-option">Add Option</button>
+                        <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440" value="5">
+                        <button type="submit">Create Poll</button>
+                    </form>
+                `;
+
+                document.getElementById('add-option').addEventListener('click', addOptionField);
+                document.getElementById('create-poll-form').addEventListener('submit', createPoll);
+            }
+
+            function addOptionField() {
+                const container = document.getElementById('options-container');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'poll-option';
+                input.placeholder = `Option ${container.children.length + 1}`;
+                container.appendChild(input);
+            }
+
+            async function createPoll(event) {
+                event.preventDefault();
+
+                const question = document.getElementById('poll-question').value;
+                const options = Array.from(document.querySelectorAll('.poll-option')).map(input => input.value).filter(val => val.trim() !== '');
+                const duration = document.getElementById('poll-duration').value;
+
+                if (question.trim() === ''
+                || options.length < 2) {
+                    alert("Please provide a question and at least two options.");
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${serverUrl}/api/polls`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question, options, duration })
+                    });
+                    if (!response.ok) throw new Error("Failed to create poll");
+                    const poll = await response.json();
+                    window.location.href = `?poll=${poll.id}`;  // Redirect to the poll page
+                } catch (error) {
+                    console.error(error);
+                    alert("Could not create poll.");
+                }
+            }
+
+            async function loadPoll(pollId) {
+                try {
+                    const response = await fetch(`${serverUrl}/api/polls/${pollId}`);
+                    if (!response.ok) throw new Error("Failed to load poll data");
+                    const poll = await response.json();
+                    renderPoll(poll);
+                } catch (error) {
+                    console.error(error);
+                    alert("Could not load poll data.");
+                }
+            }
+
+            function renderPoll(poll) {
+                const app = document.getElementById('app');
+                app.innerHTML = `
+                    <h2>${poll.question}</h2>
+                    <ul>
+                        ${poll.options.map((option, index) => `
+                            <li class="option">
+                                <label>
+                                    <input type="radio" name="poll-option" value="${index}">
+                                    ${option.text}
+                                </label>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <button id="vote-button">Vote</button>
+                    <div class="chart-container" id="analytics"></div>
+                `;
+
+                document.getElementById('vote-button').addEventListener('click', () => {
+                    const selectedOption = document.querySelector('input[name="poll-option"]:checked');
+                    if (selectedOption) {
+                        submitVote(poll.id, selectedOption.value);
+                    } else {
+                        alert("Please select an option.");
+                    }
+                });
+
+                renderAnalytics(poll);
+            }
+
+            async function submitVote(pollId, selectedOption) {
+                try {
+                    const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ selectedOption })
+                    });
+                    if (!response.ok) throw new Error("Failed to submit vote");
+                    const updatedPoll = await response.json();
+                    renderPoll(updatedPoll);  // Update UI with new poll data
+                } catch (error) {
+                    console.error(error);
+                    alert("Could not submit vote.");
+                }
+            }
+
+            function setupWebSocket(pollId) {
+                const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);
+                
+                ws.onopen = () => console.log('WebSocket connection established');
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'voteUpdated' && data.poll.id === pollId) {
+                        renderPoll(data.poll);  // Update poll data with new votes
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+                
+                ws.onclose = () => {
+                    console.log('WebSocket connection closed');
+                };
+            }
+
+            function renderAnalytics(poll) {
+                const analyticsContainer = document.getElementById('analytics');
+                const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+
+                analyticsContainer.innerHTML = `
+                    <h3>Poll Analytics</h3>
+                    <p>Total Votes: ${totalVotes}</p>
+                    <div>
+                        ${poll.options.map(option => `
+                            <div class="result-option">
+                                <span>${option.text}: ${option.votes} votes (${((option.votes / totalVotes) * 100).toFixed(2)}%)</span>
+                                <div class="progress-bar" style="width: ${(option.votes / totalVotes) * 100}%"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
