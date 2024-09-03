@@ -175,7 +175,7 @@
                     if (!response.ok) throw new Error("Failed to load poll data");
                     const poll = await response.json();
                     setState(poll);  // Set the poll state
-                    const endTime = new Date(Date.now() + (poll.duration * 60000) - (Date.now() - new Date(poll.createdAt).getTime()));  // Synchronize with server time
+                    const endTime = new Date(new Date(poll.createdAt).getTime() + poll.duration * 60000);  // Calculate end time using server's createdAt
                     startTimer(endTime);  // Start timer with correct end time
                 } catch (error) {
                     console.error(error);
@@ -232,8 +232,8 @@
                 try {
                     const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ selectedOption })
+                        headers: { 'Content-Type': ''application/json' },
+                        body: JSON.stringify({ selectedOption })  // Send selected option directly
                     });
                     if (!response.ok) throw new Error("Failed to submit vote");
                     const updatedPoll = await response.json();
@@ -245,21 +245,21 @@
             }
 
             function setupWebSocket(pollId) {
-                const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);
-                
+                const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);  // Ensure WebSocket URL is correct
+
                 ws.onopen = () => console.log('WebSocket connection established');
-                
+
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     if (data.type === 'voteUpdated' && data.poll.id === pollId) {
                         setState(data.poll);  // Update state with new poll data immediately
                     }
                 };
-                
+
                 ws.onerror = (error) => {
                     console.error('WebSocket error:', error);
                 };
-                
+
                 ws.onclose = () => {
                     console.log('WebSocket connection closed');
                 };
@@ -271,7 +271,7 @@
                     const now = new Date().getTime();
                     const distance = endTime - now;  // Calculate time left
 
-                    if (distance < 0) {
+                    if (distance <= 0) {
                         clearInterval(timerInterval);  // Stop the timer when time is up
                         document.getElementById('timer').textContent = "Voting has ended.";
                         loadResults();  // Load results after voting ends
