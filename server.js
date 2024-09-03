@@ -8,7 +8,7 @@ const app = express();
 const PORT = 5000;
 
 // SQLite database setup
-const db = new sqlite3.Database(':memory:'); // In-memory database for simplicity; replace ':memory:' with a file path for persistence
+const db = new sqlite3.Database(':memory:'); // Use ':memory:' for an in-memory database
 
 db.serialize(() => {
     db.run(`CREATE TABLE polls (
@@ -28,26 +28,32 @@ db.serialize(() => {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static files from the current directory
+app.use(express.static(path.join(__dirname)));
 
 // REST API to create a poll
 app.post('/api/polls', (req, res) => {
     const pollId = Date.now().toString();
     const { question, options, duration } = req.body;
     
-    db.run(`INSERT INTO polls (id, question, duration) VALUES (?, ?, ?)`, [pollId, question, duration]);
-    
-    options.forEach((option) => {
-        db.run(`INSERT INTO options (poll_id, text) VALUES (?, ?)`, [pollId, option]);
-    });
+    db.run(`INSERT INTO polls (id, question, duration) VALUES (?,        ?, ?)`, [pollId, question, duration], (err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Failed to create poll' });
+        }
 
-    res.json({ id: pollId, question, options: options.map(text => ({ text, votes: 0 })), duration });
+        options.forEach((option) => {
+            db.run(`INSERT INTO options (poll_id, text) VALUES (?, ?)`, [pollId, option]);
+        });
+
+        res.json({ id: pollId, question, options: options.map(text => ({ text, votes: 0 })), duration });
+    });
 });
 
 // REST API to get a poll by ID
 app.get('/api/polls/:id', (req, res) => {
     const pollId = req.params.id;
-    
+
     db.get(`SELECT * FROM polls WHERE id = ?`, [pollId], (err, poll) => {
         if (err) return res.status(500).json({ message: 'Database error' });
         if (!poll) return res.status(404).json({ message: 'Poll not found' });
@@ -68,16 +74,21 @@ app.put('/api/polls/vote/:id', (req, res) => {
     db.run(`UPDATE options SET votes = votes + 1 WHERE poll_id = ? AND id = ?`, [pollId, selectedOption], function (err) {
         if (err) return res.status(500).json({ message: 'Database error' });
 
-        db.get(`SELECT * FROM options WHERE id = ?`, [selectedOption], (err, option) => {
+        db.all(`SELECT * FROM options WHERE poll_id = ?`, [pollId], (err, options) => {
             if (err) return res.status(500).json({ message: 'Database error' });
 
-            broadcast({ type: 'voteUpdated', pollId, option });
-            res.json(option);
+            db.get(`SELECT * FROM polls WHERE id = ?`, [pollId], (err, poll) => {
+                if (err) return res.status(500).json({ message: 'Database error' });
+
+                const updatedPoll = { ...poll, options };
+                broadcast({ type: 'voteUpdated', poll: updatedPoll });
+                res.json(updatedPoll);
+            });
         });
     });
 });
 
-// Set up WebSocket for real-time updates
+// Start the server and WebSocket server
 const server = app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
 const wss = new WebSocket.Server({ server });
 
