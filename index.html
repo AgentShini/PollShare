@@ -232,7 +232,7 @@
                 try {
                     const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': ''application/json' },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ selectedOption })  // Send selected option directly
                     });
                     if (!response.ok) throw new Error("Failed to submit vote");
