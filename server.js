@@ -14,7 +14,8 @@ db.serialize(() => {
     db.run(`CREATE TABLE polls (
         id TEXT PRIMARY KEY,
         question TEXT,
-        duration INTEGER
+        duration INTEGER,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     
     db.run(`CREATE TABLE options (
@@ -108,3 +109,4 @@ function broadcast(data) {
         }
     });
 }
+
