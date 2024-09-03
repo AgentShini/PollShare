@@ -95,6 +95,7 @@
         document.addEventListener("DOMContentLoaded", function () {
             const serverUrl = "https://pollshare-1gww.onrender.com";  // Update this if server URL is different
             let timerInterval = null;  // Interval for the countdown timer
+            let state = {};  // State to manage poll data
 
             const pollId = getPollIdFromUrl();
             if (pollId) {
@@ -170,7 +171,7 @@
                     const response = await fetch(`${serverUrl}/api/polls/${pollId}`);
                     if (!response.ok) throw new Error("Failed to load poll data");
                     const poll = await response.json();
-                    renderPoll(poll);
+                    setState(poll);  // Set the poll state
                     const endTime = new Date(Date.now() + poll.duration * 60000);  // Calculate end time from current time + duration
                     startTimer(endTime);  // Start timer with correct end time
                 } catch (error) {
@@ -179,17 +180,24 @@
                 }
             }
 
-            function renderPoll(poll) {
+            function setState(newState) {
+                state = { ...state, ...newState };  // Update state with new data
+                renderPoll();  // Re-render the poll UI whenever the state changes
+            }
+
+            function renderPoll() {
                 const app = document.getElementById('app');
+                const { question, options, id } = state;
+
                 app.innerHTML = `
-                    <h2>${poll.question}</h2>
+                    <h2>${question}</h2>
                     <div id="timer"></div>
                     <ul>
-                        ${poll.options.map((option, index) => `
+                        ${options.map((option, index) => `
                             <li class="option">
                                 <label>
                                     <input type="radio" name="poll-option" value="${index}">
-                                    ${option.text}
+                                    ${option.text} (${option.votes} votes)
                                 </label>
                             </li>
                         `).join('')}
@@ -201,13 +209,13 @@
                 document.getElementById('vote-button').addEventListener('click', () => {
                     const selectedOption = document.querySelector('input[name="poll-option"]:checked');
                     if (selectedOption) {
-                        submitVote(poll.id, selectedOption.value);
+                        submitVote(id, selectedOption.value);
                     } else {
                         alert("Please select an option.");
                     }
                 });
 
-                renderAnalytics(poll);
+                renderAnalytics(state);
             }
 
             async function submitVote(pollId, selectedOption) {
@@ -219,7 +227,7 @@
                     });
                     if (!response.ok) throw new Error("Failed to submit vote");
                     const updatedPoll = await response.json();
-                    renderPoll(updatedPoll);  // Update UI with new poll data immediately
+                    setState(updatedPoll);  // Update state with the new poll data
                 } catch (error) {
                     console.error(error);
                     alert("Could not submit vote.");
@@ -233,13 +241,13 @@
                 
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'voteUpdated' && data.poll.id === pollId) {
-                        renderPoll(data.poll);  // Update poll data with new votes immediately
+                    if                    (data.type === 'voteUpdated' && data.poll.id === pollId) {
+                        setState(data.poll);  // Update state with new poll data immediately
                     }
                 };
                 
                 ws.onerror = (error) => {
-                    console.error('Web                    Socket error:', error);
+                    console.error('WebSocket error:', error);
                 };
                 
                 ws.onclose = () => {
