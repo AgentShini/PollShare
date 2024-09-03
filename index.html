@@ -211,6 +211,8 @@
                     if (selectedOption) {
                         const selectedIndex = parseInt(selectedOption.value);  // Use the zero-based index directly
                         submitVote(id, selectedIndex);
+                        console.log(selectedOption);
+                        console.log(selectedIndex);
                     } else {
                         alert("Please select an option.");
                     }
