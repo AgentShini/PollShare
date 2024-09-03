@@ -121,7 +121,7 @@
                             <input type="text" class="poll-option" placeholder="Option 2">
                         </div>
                         <button type="button" id="add-option">Add Option</button>
-                        <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440" value="5">
+                        <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440" value="" required = "true">
                         <button type="submit">Create Poll</button>
                     </form>
                 `;
@@ -217,6 +217,7 @@ document.getElementById('vote-button').addEventListener('click', () => {
             const selectedIndex = parseInt(selectedOption.value);
             submitVote(id, selectedIndex);
             hasVoted = true; // Set flag to true after voting
+            document.getElementById('vote-button').style.display = 'none'; // Hide the vote button
         } else {
             alert("Please select an option.");
         }
