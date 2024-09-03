@@ -114,22 +114,19 @@
                 const app = document.getElementById('app');
                 app.innerHTML = `
                     <h2>Create a New Poll</h2>
-                  <form id="create-poll-form">
-    <label for="poll-question">Enter your question:</label>
-    <input type="text" id="poll-question" placeholder="Enter your question">
-    
-    <label>Options:</label>
-    <div id="options-container">
-        <input type="text" class="poll-option" placeholder="Option 1">
-        <input type="text" class="poll-option" placeholder="Option 2">
-    </div>
-    <button type="button" id="add-option">Add Option</button>
-    
-    <label for="poll-duration">Poll duration (minutes):</label>
-    <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440">
-    
-    <button type="submit">Create Poll</button>
-</form>
+                    <form id="create-poll-form">
+                        <label for="poll-question">Enter your question:</label>
+                        <input type="text" id="poll-question" placeholder="Enter your question">
+                        <label>Options:</label>
+                        <div id="options-container">
+                            <input type="text" class="poll-option" placeholder="Option 1">
+                            <input type="text" class="poll-option" placeholder="Option 2">
+                        </div>
+                        <button type="button" id="add-option">Add Option</button>
+                        <label for="poll-duration">Poll duration (minutes):</label>
+                        <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440">
+                        <button type="submit">Create Poll</button>
+                    </form>
                 `;
 
                 document.getElementById('add-option').addEventListener('click', addOptionField);
@@ -178,7 +175,7 @@
                     if (!response.ok) throw new Error("Failed to load poll data");
                     const poll = await response.json();
                     setState(poll);  // Set the poll state
-                    const endTime = new Date(Date.now() + poll.duration * 60000);  // Calculate end time from current time + duration
+                    const endTime = new Date(Date.now() + (poll.duration * 60000) - (Date.now() - new Date(poll.createdAt).getTime()));  // Synchronize with server time
                     startTimer(endTime);  // Start timer with correct end time
                 } catch (error) {
                     console.error(error);
@@ -213,46 +210,42 @@
                     <div class="chart-container" id="analytics"></div>
                 `;
 
-
-// ...
-
-document.getElementById('vote-button').addEventListener('click', () => {
-    if (!hasVoted) { // Check if user hasn't voted yet
-        const selectedOption = document.querySelector('input[name="poll-option"]:checked');
-        if (selectedOption) {
-            const selectedIndex = parseInt(selectedOption.value);
-            submitVote(id, selectedIndex);
-            hasVoted = true; // Set flag to true after voting
-        } else {
-            alert("Please select an option.");
-        }
-    } else {
-        alert("You have already voted.");
-    }
-});
+                document.getElementById('vote-button').addEventListener('click', () => {
+                    if (!hasVoted) { // Check if user hasn't voted yet
+                        const selectedOption = document.querySelector('input[name="poll-option"]:checked');
+                        if (selectedOption) {
+                            const selectedIndex = parseInt(selectedOption.value);
+                            submitVote(id, selectedIndex);
+                            hasVoted = true; // Set flag to true after voting
+                        } else {
+                            alert("Please select an option.");
+                        }
+                    } else {
+                        alert("You have already voted.");
+                    }
+                });
 
                 renderAnalytics(state);
             }
 
             async function submitVote(pollId, selectedOption) {
-    try {
-        const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ selectedOption: selectedOption + 1 }) // Add 1 to the selected index
-        });
-        if (!response.ok) throw new Error("Failed to submit vote");
-        const updatedPoll = await response.json();
-        setState(updatedPoll);
-    } catch (error) {
-        console.error(error);
-        alert("Could not submit vote.");
-    }
-}
+                try {
+                    const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ selectedOption })
+                    });
+                    if (!response.ok) throw new Error("Failed to submit vote");
+                    const updatedPoll = await response.json();
+                    setState(updatedPoll);  // Update state after voting
+                } catch (error) {
+                    console.error(error);
+                    alert("Could not submit vote.");
+                }
+            }
 
             function setupWebSocket(pollId) {
-                const ws = new
- WebSocket(`ws://pollshare-1gww.onrender.com`);
+                const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);
                 
                 ws.onopen = () => console.log('WebSocket connection established');
                 
@@ -298,8 +291,6 @@ document.getElementById('vote-button').addEventListener('click', () => {
                         .then(response => response.json())
                         .then(poll => {
                             renderResults(poll);
-                            const resultUrl = `${window.location.origin}/results?poll=${poll.id}`;
-                            alert(`Poll has ended. You can share the results with this URL: ${resultUrl}`);
                         })
                         .catch(error => console.error('Error loading results:', error));
                 }
@@ -393,3 +384,4 @@ document.getElementById('vote-button').addEventListener('click', () => {
     </script>
 </body>
 </html>
+
