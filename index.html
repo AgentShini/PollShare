@@ -184,42 +184,47 @@
                 state = { ...state, ...newState };  // Update state with new data
                 renderPoll();  // Re-render the poll UI whenever the state changes
             }
+function renderPoll() {
+    const app = document.getElementById('app');
+    const { question, options, id } = state;
+    app.innerHTML = `
+        <h2>${question}</h2>
+        <div id="timer"></div>
+        <ul>
+            ${options.map((option, index) => `
+                <li class="option">
+                    <label>
+                        <input type="radio" name="poll-option" value="${index}" ${selectedOption === index ? 'checked' : ''}>
+                        ${option.text} (${option.votes} votes)
+                    </label>
+                </li>
+            `).join('')}
+        </ul>
+        ${selectedOption !== null ? `
+            <button id="change-vote-button">Change Vote</button>
+        ` : `
+            <button id="vote-button">Vote</button>
+        `}
+        <div class="chart-container" id="analytics"></div>
+    `;
 
-            function renderPoll() {
-                const app = document.getElementById('app');
-                const { question, options, id } = state;
+    if (selectedOption !== null) {
+        document.getElementById('change-vote-button').addEventListener('click', () => {
+            selectedOption = null;
+            renderPoll();
+        });
+    } else {
+        document.getElementById('vote-button').addEventListener('click', () => {
+            const selectedOptionIndex = document.querySelector('input[name="poll-option"]:checked').value;
+            selectedOption = parseInt(selectedOptionIndex);
+            renderPoll();
+            // Update analytics in real-time
+            renderAnalytics(state);
+        });
+    }
 
-                app.innerHTML = `
-                    <h2>${question}</h2>
-                    <div id="timer"></div>
-                    <ul>
-                        ${options.map((option, index) => `
-                            <li class="option">
-                                <label>
-                                    <input type="radio" name="poll-option" value="${index}">  <!-- Zero-based value -->
-                                    ${option.text} (${option.votes} votes)
-                                </label>
-                            </li>
-                        `).join('')}
-                    </ul>
-                    <button id="vote-button">Vote</button>
-                    <div class="chart-container" id="analytics"></div>
-                `;
-
-                document.getElementById('vote-button').addEventListener('click', () => {
-                    const selectedOption = document.querySelector('input[name="poll-option"]:checked');
-                    if (selectedOption) {
-                        const selectedIndex = parseInt(selectedOption.value);  // Use the zero-based index directly
-                        submitVote(id, selectedIndex);
-                        console.log(selectedOption);
-                        console.log(selectedIndex);
-                    } else {
-                        alert("Please select an option.");
-                    }
-                });
-
-                renderAnalytics(state);
-            }
+    renderAnalytics(state);
+}
 
             let selectedOption = null;
 
