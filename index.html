@@ -114,16 +114,22 @@
                 const app = document.getElementById('app');
                 app.innerHTML = `
                     <h2>Create a New Poll</h2>
-                    <form id="create-poll-form">
-                        <input type="text" id="poll-question" placeholder="Enter your question">
-                        <div id="options-container">
-                            <input type="text" class="poll-option" placeholder="Option 1">
-                            <input type="text" class="poll-option" placeholder="Option 2">
-                        </div>
-                        <button type="button" id="add-option">Add Option</button>
-                        <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440" value="5">
-                        <button type="submit">Create Poll</button>
-                    </form>
+                  <form id="create-poll-form">
+    <label for="poll-question">Enter your question:</label>
+    <input type="text" id="poll-question" placeholder="Enter your question">
+    
+    <label>Options:</label>
+    <div id="options-container">
+        <input type="text" class="poll-option" placeholder="Option 1">
+        <input type="text" class="poll-option" placeholder="Option 2">
+    </div>
+    <button type="button" id="add-option">Add Option</button>
+    
+    <label for="poll-duration">Poll duration (minutes):</label>
+    <input type="number" id="poll-duration" placeholder="Duration in minutes" min="1" max="1440" value="5">
+    
+    <button type="submit">Create Poll</button>
+</form>
                 `;
 
                 document.getElementById('add-option').addEventListener('click', addOptionField);
