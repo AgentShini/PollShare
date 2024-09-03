@@ -94,6 +94,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const serverUrl = "https://pollshare-1gww.onrender.com";  // Update this if server URL is different
+            const timeApiUrl = "http://worldtimeapi.org/api/timezone/Etc/UTC";  // External time provider API
             let timerInterval = null;  // Interval for the countdown timer
             let state = {};  // State to manage poll data
 
@@ -175,7 +176,14 @@
                     if (!response.ok) throw new Error("Failed to load poll data");
                     const poll = await response.json();
                     setState(poll);  // Set the poll state
-                    const endTime = new Date(new Date(poll.createdAt).getTime() + poll.duration * 60000);  // Calculate end time using server's createdAt
+
+                    // Get the current UTC time from an external provider
+                    const currentTimeResponse = await fetch(timeApiUrl);
+                    const currentTimeData = await currentTimeResponse.json();
+                    const currentTime = new Date(currentTimeData.datetime);  // Current UTC time
+
+                    // Calculate the end time using current UTC time and duration
+                    const endTime = new Date(currentTime.getTime() + poll.duration * 60000);
                     startTimer(endTime);  // Start timer with correct end time
                 } catch (error) {
                     console.error(error);
@@ -327,7 +335,7 @@
                         borderWidth: 1
                     }]
                 };
-                
+
                 new Chart(ctx, {
                     type: 'bar',  // Bar chart to show results
                     data: data,
@@ -384,4 +392,5 @@
     </script>
 </body>
 </html>
+
 
