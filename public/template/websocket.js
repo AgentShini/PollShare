@@ -1,5 +1,5 @@
 function setupWebSocket(pollId) {
-    const ws = new WebSocket(`ws://localhost:5000/ws/polls/${pollId}`);
+    const ws = new WebSocket(`ws://https://pollshare-1gww.onrender.com/ws/polls/${pollId}`);
     
     ws.onopen = () => console.log('WebSocket connection established');
     

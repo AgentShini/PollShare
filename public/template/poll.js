@@ -1,6 +1,6 @@
 async function loadPoll(pollId) {
     try {
-        const response = await fetch(`/api/polls/${pollId}`);
+        const response = await fetch(`https://pollshare-1gww.onrender.com/api/polls/${pollId}`);
         if (!response.ok) throw new Error("Failed to load poll data");
         const poll = await response.json();
         renderPoll(poll);
@@ -12,7 +12,7 @@ async function loadPoll(pollId) {
 
 async function submitVote(pollId, selectedOption) {
     try {
-        const response = await fetch(`/api/polls/vote/${pollId}`, {
+        const response = await fetch(`https://pollshare-1gww.onrender.com/api/polls/vote/${pollId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ selectedOption })
@@ -74,7 +74,7 @@ async function createPoll(event) {
     }
 
     try {
-        const response = await fetch('/api/polls', {
+        const response = await fetch('https://pollshare-1gww.onrender.com/api/polls', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question, options, duration })
