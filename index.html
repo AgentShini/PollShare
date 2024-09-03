@@ -93,7 +93,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const serverUrl = "http://localhost:5000";  // Update this if server URL is different
+            const serverUrl = "https://pollshare-1gww.onrender.com";  // Update this if server URL is different
             let timerInterval = null;  // Interval for the countdown timer
 
             const pollId = getPollIdFromUrl();
@@ -227,7 +227,7 @@
             }
 
             function setupWebSocket(pollId) {
-                const ws = new WebSocket(`ws://localhost:5000`);
+                const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);
                 
                 ws.onopen = () => console.log('WebSocket connection established');
                 
