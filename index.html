@@ -209,7 +209,8 @@
                 document.getElementById('vote-button').addEventListener('click', () => {
                     const selectedOption = document.querySelector('input[name="poll-option"]:checked');
                     if (selectedOption) {
-                        submitVote(id, selectedOption.value);
+                        const selectedIndex = parseInt(selectedOption.value);  // Ensure the value is correctly parsed to an integer
+                        submitVote(id, selectedIndex);
                     } else {
                         alert("Please select an option.");
                     }
@@ -223,13 +224,14 @@
                     const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ selectedOption })
+                        body: JSON.stringify({ selectedOption })  // Send correct option index
                     });
                     if (!response.ok) throw new Error("Failed to submit vote");
                     const updatedPoll = await response.json();
                     setState(updatedPoll);  // Update state with the new poll data
                 } catch (error) {
-                    console.error(error);
+                    console.error(error
+                                                      );
                     alert("Could not submit vote.");
                 }
             }
@@ -241,7 +243,7 @@
                 
                 ws.onmessage = (event) => {
                     const data = JSON.parse(event.data);
-                    if                    (data.type === 'voteUpdated' && data.poll.id === pollId) {
+                    if (data.type === 'voteUpdated' && data.poll.id === pollId) {
                         setState(data.poll);  // Update state with new poll data immediately
                     }
                 };
