@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Retro Polling App</title>
+    <link rel="manifest" href="manifest.json">
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
@@ -79,6 +80,7 @@
             text-align: center;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
 </head>
 <body>
     <div class="container">
@@ -90,7 +92,8 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const serverUrl = "https://pollshare-1gww.onrender.com";  // Update this if server URL is different
+            const serverUrl = "http://localhost:5000";  // Update this if server URL is different
+            let timerInterval = null;  // Interval for the countdown timer
 
             const pollId = getPollIdFromUrl();
             if (pollId) {
@@ -141,8 +144,7 @@
                 const options = Array.from(document.querySelectorAll('.poll-option')).map(input => input.value).filter(val => val.trim() !== '');
                 const duration = document.getElementById('poll-duration').value;
 
-                if (question.trim() === ''
-                || options.length < 2) {
+                if (question.trim() === '' || options.length < 2) {
                     alert("Please provide a question and at least two options.");
                     return;
                 }
@@ -168,6 +170,7 @@
                     if (!response.ok) throw new Error("Failed to load poll data");
                     const poll = await response.json();
                     renderPoll(poll);
+                    startTimer(new Date(poll.endTime));
                 } catch (error) {
                     console.error(error);
                     alert("Could not load poll data.");
@@ -178,6 +181,7 @@
                 const app = document.getElementById('app');
                 app.innerHTML = `
                     <h2>${poll.question}</h2>
+                    <div id="timer"></div>
                     <ul>
                         ${poll.options.map((option, index) => `
                             <li class="option">
@@ -221,7 +225,7 @@
             }
 
             function setupWebSocket(pollId) {
-                const ws = new WebSocket(`ws://pollshare-1gww.onrender.com`);
+                const ws = new WebSocket(`ws://localhost:5000`);
                 
                 ws.onopen = () => console.log('WebSocket connection established');
                 
@@ -239,6 +243,98 @@
                 ws.onclose = () => {
                     console.log('WebSocket connection closed');
                 };
+            }
+
+            function startTimer(endTime) {
+                clearInterval(timerInterval);
+                timerInterval = setInterval(function () {
+                    const now = new Date().getTime();
+                    const distance = endTime - now;
+                                        if (distance < 0) {
+                        clearInterval(timerInterval);
+                        document.getElementById('timer').textContent = "Voting has ended.";
+                        loadResults();
+                    } else {
+                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                        document.getElementById('timer').textContent = `Time remaining: ${minutes}m ${seconds}s`;
+                    }
+                }, 1000);
+            }
+
+            function loadResults() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const pollId = urlParams.get('poll');
+                if (pollId) {
+                    fetch(`${serverUrl}/api/polls/${pollId}`)
+                        .then(response => response.json())
+                        .then(poll => {
+                            renderResults(poll);
+                            const resultUrl = `${window.location.origin}/results?poll=${poll.id}`;
+                            alert(`Poll has ended. You can share the results with this URL: ${resultUrl}`);
+                        })
+                        .catch(error => console.error('Error loading results:', error));
+                }
+            }
+
+            function renderResults(poll) {
+                const app = document.getElementById('app');
+                app.innerHTML = `
+                    <h2>Poll Results for: ${poll.question}</h2>
+                    <div class="chart-container">
+                        <canvas id="resultsChart" width="400" height="400"></canvas>
+                    </div>
+                    <ul>
+                        ${poll.options.map(option => `
+                            <li class="result-option">
+                                ${option.text}: ${option.votes} votes (${((option.votes / poll.options.reduce((acc, o) => acc + o.votes, 0)) * 100).toFixed(2)}%)
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+
+                renderChart(poll);
+            }
+
+            function renderChart(poll) {
+                const ctx = document.getElementById('resultsChart').getContext('2d');
+                const data = {
+                    labels: poll.options.map(option => option.text),
+                    datasets: [{
+                        label: 'Votes',
+                        data: poll.options.map(option => option.votes),
+                        backgroundColor: ['rgba(0, 0, 0, 0.8)', 'rgba(100, 100, 100, 0.8)', 'rgba(150, 150, 150, 0.8)', 'rgba(200, 200, 200, 0.8)'],
+                        borderColor: ['#000', '#000', '#000', '#000'],
+                        borderWidth: 1
+                    }]
+                };
+                
+                new Chart(ctx, {
+                    type: 'bar',  // You can use 'pie', 'doughnut', etc. as well
+                    data: data,
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#000'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#000'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#000'
+                                }
+                            }
+                        }
+                    }
+                });
             }
 
             function renderAnalytics(poll) {
@@ -259,6 +355,16 @@
                 `;
             }
         });
+
+        // Register service worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then((registration) => console.log('Service Worker registered with scope:', registration.scope))
+                .catch((error) => console.error('Service Worker registration failed:', error));
+        }
     </script>
 </body>
 </html>
+
+
+                   
