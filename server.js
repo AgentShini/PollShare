@@ -32,12 +32,17 @@ app.use(express.json());
 // Serve static files from the current directory
 app.use(express.static(path.join(__dirname)));
 
+// Explicitly serve index.html for the root URL
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // REST API to create a poll
 app.post('/api/polls', (req, res) => {
     const pollId = Date.now().toString();
     const { question, options, duration } = req.body;
     
-    db.run(`INSERT INTO polls (id, question, duration) VALUES (?,        ?, ?)`, [pollId, question, duration], (err) => {
+    db.run(`INSERT INTO polls (id, question, duration) VALUES (?, ?, ?)`, [pollId, question, duration], (err) => {
         if (err) {
             return res.status(500).json({ message: 'Failed to create poll' });
         }
@@ -96,11 +101,4 @@ wss.on('connection', (ws) => {
     console.log('New WebSocket connection');
 });
 
-function broadcast(data) {
-    wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
-        }
-    });
-}
-
+function broadcast(data)
