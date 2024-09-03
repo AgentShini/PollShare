@@ -222,20 +222,20 @@
             }
 
             async function submitVote(pollId, selectedOption) {
-                try {
-                    const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ selectedOption })
-                    });
-                    if (!response.ok) throw new Error("Failed to submit vote");
-                    const updatedPoll = await response.json();
-                    setState(updatedPoll);
-                } catch (error) {
-                    console.error(error);
-                    alert("Could not submit vote.");
-                }
-            }
+    try {
+        const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selectedOption: selectedOption + 1 }) // Add 1 to the selected index
+        });
+        if (!response.ok) throw new Error("Failed to submit vote");
+        const updatedPoll = await response.json();
+        setState(updatedPoll);
+    } catch (error) {
+        console.error(error);
+        alert("Could not submit vote.");
+    }
+}
 
             function setupWebSocket(pollId) {
                 const ws = new
