@@ -210,7 +210,7 @@
                     const selectedOption = document.querySelector('input[name="poll-option"]:checked');
                     if (selectedOption) {
                         const selectedIndex = parseInt(selectedOption.value);  // Ensure the value is correctly parsed to an integer
-                        submitVote(id, selectedIndex);
+                        submitVote(id, selectedIndex - 1);
                     } else {
                         alert("Please select an option.");
                     }
