@@ -221,19 +221,29 @@
                 renderAnalytics(state);
             }
 
-            async function submitVote(pollId, selectedOption) {
-    try {
-        const response = await fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ selectedOption: selectedOption + 1 }) // Add 1 to the selected index
-        });
-        if (!response.ok) throw new Error("Failed to submit vote");
-        const updatedPoll = await response.json();
-        setState(updatedPoll);
-    } catch (error) {
-        console.error(error);
-        alert("Could not submit vote.");
+            let selectedOption = null;
+
+async function submitVote(pollId, option) {
+    selectedOption = option; // Store the selected option
+}
+
+function startTimer(endTime) {
+    // ...
+    if (distance < 0) {
+        clearInterval(timerInterval);
+        document.getElementById('timer').textContent = "Voting has ended.";
+        loadResults();
+        if (selectedOption !== null) {
+            // Send the selected option to the server when the timer runs out
+            fetch(`${serverUrl}/api/polls/vote/${pollId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ selectedOption: selectedOption + 1 })
+            })
+            .then(response => response.json())
+            .then(updatedPoll => setState(updatedPoll))
+            .catch(error => console.error('Error submitting vote:', error));
+        }
     }
 }
 
